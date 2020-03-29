@@ -3,7 +3,7 @@ FROM continuumio/miniconda3
 # activate conda enviorment
 RUN /bin/sh -c conda activate base
 ENV CURRENT_DIR /airflow_app
-WORKDIR /airflow_app
+WORKDIR /${CURRENT_DIR}
 # COPY requirements.txt .
 # RUN pip install -r requirements.txt
 RUN apt-get update && apt-get install -y \
@@ -23,7 +23,7 @@ RUN apt-get update && apt-get install -y \
     libxi6 \
     libgconf-2-4
 
-ENV AIRFLOW_HOME=/airflow_app/airflow
+ENV AIRFLOW_HOME=/${CURRENT_DIR}/airflow
 RUN pip install apache-airflow
 RUN conda install -c bioconda mysqlclient
 RUN pip install psycopg2-binary
@@ -37,4 +37,4 @@ ENV CONDA_PACKAGES="\
 RUN conda install $CONDA_PACKAGES
 
 
-COPY . /airflow_app
+COPY . /${CURRENT_DIR}
