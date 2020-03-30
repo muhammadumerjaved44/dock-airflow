@@ -1,0 +1,87 @@
+version: "3"
+services:
+
+  # python and airflow container configurations #2
+  airflow-python:
+    container_name: airflow-python
+    # build: .
+    image: muhammadumerjaved44/dock-airflow
+    stdin_open: true
+    privileged: true
+    tty: true
+    restart: always
+    entrypoint: airflow webserver -p 8080
+    ports:
+      - "7053:8080"
+    depends_on:
+      - airflow-initdb
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - CURRENT_DIR=/airflow_app
+      - AIRFLOW_HOME=/airflow_app/airflow
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=${AIRFLOW__CORE__SQL_ALCHEMY_CONN}
+    volumes:
+      - .files/airflow.cfg:/airflow_app/airflow/airflow.cfg
+      - ./dags:/airflow_app/dags
+    healthcheck:
+      test: ["CMD-SHELL", "[ -f /airflow_app/airflow/airflow-webserver.pid ]"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+
+  #  airflow initdb service configuration #1
+  airflow-initdb:
+    container_name: airflow-initdb
+    # build: .
+    image: muhammadumerjaved44/dock-airflow
+    entrypoint: airflow initdb
+    depends_on:
+      - airflow-postgres
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - AIRFLOW_HOME=/airflow_app/airflow
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=${AIRFLOW__CORE__SQL_ALCHEMY_CONN}
+    volumes:
+      - ./dags:/airflow_app/dags
+      - .files/airflow.cfg:/airflow_app/airflow/airflow.cfg
+
+  #  airflow scheduler service configuration #3
+  airflow-scheduler:
+    # build: .
+    image: muhammadumerjaved44/dock-airflow
+    container_name: airflow-scheduler
+    depends_on:
+      - airflow-python
+    volumes:
+      - .files/airflow.cfg:/airflow_app/airflow/airflow.cfg
+      - ./dags:/airflow_app/dags
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - AIRFLOW_HOME=/airflow_app/airflow
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=${AIRFLOW__CORE__SQL_ALCHEMY_CONN}
+    entrypoint: airflow scheduler
+    stdin_open: true
+    privileged: true
+    tty: true
+    healthcheck:
+      test: ["CMD-SHELL", "[ -f /airflow_app/airflow/airflow-scheduler.pid ]"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+
+  airflow-postgres:
+    container_name: airflow-postgres
+    image: postgres:10.1-alpine
+    ports:
+      - 5438:5432
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
